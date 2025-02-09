@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>expenses</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <link rel="stylesheet" href="./css/expenses.css" >
+
+</head>
+<body>
+    <p id="premium-user-text" style="display: none;">You're a premium user</p>
+    <h3>Daily Expenses</h3>
+    <button id="rzp-button1">Buy Premium</button>
+
+    <h3>Expenses</h3>
+    <form id="expense-form">
+        <input type="number" name="expense" id="expense" placeholder="Enter Expense" required>
+        <input type="text" name="dscription" id="description" placeholder="Enter Description">
+        <select id="type" name="type" required>
+            <option value="" disabled selected hidden>Select an type</option>
+            <option value="food">Food</option>
+            <option value="transports">Transports</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Entertainment">Entertainment</option>
+          </select>
+        <button type="submit">Add Expense</button>
+    </form>
+      <h2>Expenses record</h2>
+      <div id="preferences">
+        <label for="rowsPerPage">Rows per page:</label>
+        <select id="rowsPerPage" onchange="updateRowsPerPage()">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+
+    <div id="expenses">
+        
+    </div>
+    <div id="pagination"></div>
+
+    
+    <h3>Income</h3>
+    <form id="income-form">
+        <input type="number" name="income" id="income" placeholder="Enter income" required>
+        <input type="text" name="dscription" id="description" placeholder="Enter Description">
+        <button type="submit">Add Income</button>
+    </form>
+    <div id="income-container"></div>
+    
+
+    <div id="premium-features" style="display: none;">
+        <button id="leaderboard-btn" style="margin-bottom: 10px;" onclick="getLeaderBoard()">Show leaderboard</button>
+        <div id="leaderboard" style="margin-bottom: 10pt;"></div>
+        <div class="container" style="margin-bottom: 10pt;">
+            <h3>Show Filtered Report</h3>
+            <div class="filter-options">
+                <button onclick="filterExpenses('daily')">Daily</button>
+                <button onclick="filterExpenses('weekly')">Weekly</button>
+                <button onclick="filterExpenses('monthly')">Monthly</button>
+
+            </div>
+            <table id="table" style="margin-top: 10px;">
+                <thead id="table-head" style="display:none">
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Expense</th>
+                        <th>Income</th>
+                    </tr>
+                </thead>
+                <tbody id="records-table">
+                </tbody>
+            </table>
+        </div>
+        <div id="download-btn">
+        <button  onclick="downloadReport()" >Download Expenses</button>
+    </div>
+    </div>
+
+    <p id="error" style="color:red"></p>
+    <script src="../scripts/expenses.js"></script>
+</body>
+</html>
