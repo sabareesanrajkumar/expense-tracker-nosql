@@ -1,15 +1,14 @@
-const Sequelize = require("sequelize");
-const sequelize = require("../util/database");
+const mongoose = require("mongoose");
 
-const Income = sequelize.define("income", {
+const Schema = mongoose.Schema;
+
+const incomeSchema = new Schema({
   id: {
-    type: Sequelize.INTEGER,
-    autoIncrement: true,
-    allowNull: false,
-    primaryKey: true,
+    type: Number,
+    required: true,
   },
-  income: Sequelize.INTEGER,
-  description: Sequelize.STRING,
+  income: Number,
+  description: String,
 });
 
-module.exports = Income;
+module.exports = mongoose.model("income", incomeSchema);

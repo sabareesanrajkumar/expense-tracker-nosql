@@ -4,8 +4,8 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 
-const sequelize = require("./util/database");
 const userRoutes = require("./routes/users");
 const expenseRoutes = require("./routes/expenses");
 const purchaseRoutes = require("./routes/purchase");
@@ -14,11 +14,11 @@ const passwordRoutes = require("./routes/password");
 const incomeRoutes = require("./routes/income");
 const downloadRoutes = require("./routes/download");
 
-const User = require("./models/users");
-const Expense = require("./models/expenses");
-const Income = require("./models/income");
-const Order = require("./models/orders");
-const forgotPasswordRequest = require("./models/forgotpasswordRequests");
+// const User = require("./models/users");
+// const Expense = require("./models/expenses");
+// const Income = require("./models/income");
+// const Order = require("./models/orders");
+// const forgotPasswordRequest = require("./models/forgotpasswordRequests");
 
 const app = express();
 
@@ -38,27 +38,25 @@ app.use("/password", passwordRoutes);
 app.use("/income", incomeRoutes);
 app.use("/download", downloadRoutes);
 
-User.hasMany(Order);
-Order.belongsTo(User);
-
-User.hasMany(Expense, { foreignKey: "userId" });
-Expense.belongsTo(User, { foreignKey: "userId" });
-
-User.hasMany(Income, { foreignKey: "userId" });
-Income.belongsTo(User, { foreignKey: "userId" });
-
-User.hasMany(forgotPasswordRequest, {
-  foreignKey: "userId",
-});
-forgotPasswordRequest.belongsTo(User, {
-  foreignKey: "userId",
-});
-
-sequelize
-  .sync()
-  .then(() => {
-    console.log("DB sync done");
+mongoose
+  .connect(
+    "mongodb+srv://maximilian:9u4biljMQc4jjqbe@cluster0-ntrwp.mongodb.net/shop?retryWrites=true"
+  )
+  .then((result) => {
+    User.findOne().then((user) => {
+      if (!user) {
+        const user = new User({
+          name: "Max",
+          email: "max@test.com",
+          cart: {
+            items: [],
+          },
+        });
+        user.save();
+      }
+    });
+    app.listen(3000);
   })
-  .catch((err) => console.log(err));
-
-app.listen(3000);
+  .catch((err) => {
+    console.log(err);
+  });
