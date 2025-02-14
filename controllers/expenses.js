@@ -1,36 +1,38 @@
-const Expenses = require("../models/expenses");
-const Users = require("../models/users");
-const Sequelize = require("../util/database");
+const Expense = require('../models/expenses');
+const Users = require('../models/users');
+const mongoose = require('mongoose');
 
 exports.addExpense = async (req, res, next) => {
-  const t = await Sequelize.transaction();
-
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    await Expenses.create(
+    const expense = new Expense({
+      ...req.body,
+      userId: req.user._id,
+    });
+    await expense.save({ session });
+
+    await Users.findByIdAndUpdate(
+      req.user._id,
       {
-        ...req.body,
-        userId: req.user.id,
+        $inc: {
+          totalExpense: req.body.expense,
+        },
       },
-      { transaction: t }
-    );
-    let newTotalExpense = +req.user.totalExpense + +req.body.expense;
-
-    await req.user.update(
-      {
-        totalExpense: newTotalExpense,
-      },
-      { transaction: t }
+      { session }
     );
 
-    await t.commit();
+    await session.commitTransaction();
+    session.endSession();
 
-    return res.status(200).json({ success: true, message: "expense created" });
+    return res.status(200).json({ success: true, message: 'expense created' });
   } catch (err) {
-    await t.rollback();
-
-    return res
-      .status(500)
-      .json({ success: false, message: "failed to store expense in database" });
+    await session.abortTransaction();
+    session.endSession();
+    return res.status(500).json({
+      success: false,
+      message: 'failed to store expense in database' + err.message,
+    });
   }
 };
 
@@ -40,11 +42,10 @@ exports.getExpenses = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 5;
     const offset = (page - 1) * limit;
 
-    const { count, rows: expenses } = await Expenses.findAndCountAll({
-      where: { userId: req.user.id },
-      limit,
-      offset,
-    });
+    const count = await Expense.countDocuments({ userId: req.user._id });
+    const expenses = await Expense.find({ userId: req.user._id })
+      .limit(limit)
+      .skip(offset);
 
     const totalPages = Math.ceil(count / limit);
 
@@ -57,35 +58,43 @@ exports.getExpenses = async (req, res, next) => {
   } catch (err) {
     return res
       .status(500)
-      .json({ success: false, message: "Something went wrong", error: err });
+      .json({ success: false, message: 'Something went wrong', error: err });
   }
 };
 
 exports.deleteExpense = async (req, res, next) => {
-  const expenseId = req.params.expenseId;
-  const userId = req.user.id;
-  const t = await Sequelize.transaction();
+  const expenseId = mongoose.Types.ObjectId.createFromHexString(
+    req.params.expenseId
+  );
+  const userId = req.user._id;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const oldExpense = await Expenses.findOne({
-      where: { id: expenseId, userId: userId },
+    const oldExpense = await Expense.findOne({
+      _id: expenseId,
     });
 
-    await Users.update(
+    await Users.findByIdAndUpdate(
+      req.user._id,
       {
-        totalExpense: Sequelize.literal(`totalExpense - ${oldExpense.expense}`),
+        $inc: {
+          totalExpense: -oldExpense.expense,
+        },
       },
-      { where: { id: userId }, transaction: t }
+      { session }
     );
-    await Expenses.destroy({
-      where: { id: expenseId, userId: userId },
-      transaction: t,
-    });
 
-    await t.commit();
-    res.status(200).json({ success: true, message: "expense deleted" });
+    const deletedExpense = await Expense.findByIdAndDelete(expenseId, {
+      session,
+    });
+    await session.commitTransaction();
+    session.endSession();
+    res.status(200).json({ success: true, message: 'expense deleted' });
   } catch (err) {
-    await t.rollback();
+    console.log(err);
+    await session.abortTransaction();
+    session.endSession();
 
     res.status(500).json({ success: false, message: "couldn't deleted" });
   }

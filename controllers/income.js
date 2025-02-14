@@ -1,39 +1,42 @@
-const Income = require("../models/income");
-const Users = require("../models/users");
-const Sequelize = require("../util/database");
+const Income = require('../models/income');
+const Users = require('../models/users');
+const mongoose = require('mongoose');
 
 exports.addIncome = async (req, res, next) => {
-  const t = await Sequelize.transaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    await Income.create(
+    const income = new Income({
+      ...req.body,
+      userId: req.user._id,
+    });
+    await income.save({ session });
+
+    await Users.findByIdAndUpdate(
+      req.user._id,
       {
-        ...req.body,
-        userId: req.user.id,
+        $inc: {
+          totalIncome: req.body.income,
+        },
       },
-      { transaction: t }
+      { session }
     );
-    let newTotalIncome = +req.user.totalIncome + +req.body.income;
+    await session.commitTransaction();
+    session.endSession();
 
-    await req.user.update(
-      {
-        totalIncome: newTotalIncome,
-      },
-      { transaction: t }
-    );
-
-    await t.commit();
-
-    return res.status(200).json({ success: true, message: "income added" });
+    return res.status(200).json({ success: true, message: 'income added' });
   } catch (err) {
-    await t.rollback();
+    console.log(err);
+    await session.abortTransaction();
+    session.endSession();
     return res
       .status(500)
-      .json({ success: false, message: "failed to add income" });
+      .json({ success: false, message: 'failed to add income' });
   }
 };
 
 exports.getIncome = async (req, res, next) => {
-  await Income.findAll({ where: { userId: req.user.id } })
+  await Income.find({ userId: req.user._id })
     .then((income) => {
       if (income) {
         return res.status(200).json(income);
@@ -44,35 +47,44 @@ exports.getIncome = async (req, res, next) => {
       console.log(err);
       return res
         .status(500)
-        .json({ success: false, message: "sometihng went wrong" });
+        .json({ success: false, message: 'sometihng went wrong' });
     });
 };
 
 exports.deleteIncome = async (req, res, next) => {
-  const incomeId = req.params.incomeId;
-  const userId = req.user.id;
-  const t = await Sequelize.transaction();
+  const incomeId = mongoose.Types.ObjectId.createFromHexString(
+    req.params.incomeId
+  );
+  const userId = req.user._id;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     const oldIncome = await Income.findOne({
-      where: { id: incomeId, userId: userId },
+      _id: incomeId,
     });
 
-    await Users.update(
+    await Users.findByIdAndUpdate(
+      req.user._id,
       {
-        totalIncome: Sequelize.literal(`totalIncome - ${oldIncome.income}`),
+        $inc: {
+          totalExpense: -oldIncome.income,
+        },
       },
-      { where: { id: userId }, transaction: t }
+      { session }
     );
-    await Income.destroy({
-      where: { id: incomeId, userId: userId },
-      transaction: t,
+
+    const deletedIncome = await Income.findByIdAndDelete(incomeId, {
+      session,
     });
 
-    await t.commit();
-    res.status(200).json({ success: true, message: "income deleted" });
+    await session.commitTransaction();
+    session.endSession();
+    res.status(200).json({ success: true, message: 'income deleted' });
   } catch (err) {
-    await t.rollback();
+    await session.abortTransaction();
+    session.endSession();
+    console.log(err);
 
     res
       .status(500)

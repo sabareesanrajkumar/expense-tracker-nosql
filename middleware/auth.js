@@ -1,12 +1,12 @@
-const jwt = require("jsonwebtoken");
-const Users = require("../models/users");
-require("dotenv").config();
+const jwt = require('jsonwebtoken');
+const Users = require('../models/users');
+require('dotenv').config();
 
 const authenticate = (req, res, next) => {
   try {
-    const token = req.header("Authorization");
+    const token = req.header('Authorization');
     const user = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    Users.findByPk(user.userId)
+    Users.findOne({ _id: user.userId })
       .then((user) => {
         req.user = user;
         next();
@@ -18,7 +18,7 @@ const authenticate = (req, res, next) => {
     console.log(err);
     return res
       .status(401)
-      .json({ success: false, message: "authentication error" });
+      .json({ success: false, message: 'authentication error' });
   }
 };
 
