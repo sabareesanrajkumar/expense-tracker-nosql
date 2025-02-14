@@ -1,15 +1,15 @@
-const Sib = require("sib-api-v3-sdk");
-const { v4: uuidv4 } = require("uuid");
-const bcrypt = require("bcrypt");
-require("dotenv").config();
+const Sib = require('sib-api-v3-sdk');
+const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
 
-const Users = require("../models/users");
-const ForgotPasswordRequests = require("../models/forgotpasswordRequests");
+const Users = require('../models/users');
+const ForgotPasswordRequests = require('../models/forgotpasswordRequests');
 
 exports.forgotPassword = async (req, res, next) => {
   const client = Sib.ApiClient.instance;
 
-  const apiKey = client.authentications["api-key"];
+  const apiKey = client.authentications['api-key'];
   apiKey.apiKey = process.env.BREVO_API_KEY;
 
   const tranEmailApi = new Sib.TransactionalEmailsApi();
@@ -25,9 +25,9 @@ exports.forgotPassword = async (req, res, next) => {
   ];
 
   try {
-    const user = await Users.findOne({ where: { email: req.body.email } });
+    const user = await Users.findOne({ email: req.body.email });
     if (!user) {
-      return res.status(404).json({ message: "user not found" });
+      return res.status(404).json({ message: 'user not found' });
     }
     const resetUuid = uuidv4();
 
@@ -41,23 +41,23 @@ exports.forgotPassword = async (req, res, next) => {
     const response = await tranEmailApi.sendTransacEmail({
       sender,
       to: receivers,
-      subject: "Reset your password",
+      subject: 'Reset your password',
       textContent: `
         This is the reset password link
         ${resetLink}
         `,
     });
 
-    console.log("Email sent successfully:", response);
+    console.log('Email sent successfully:', response);
     res
       .status(200)
-      .json({ message: "Password reset email sent successfully!" });
+      .json({ message: 'Password reset email sent successfully!' });
   } catch (error) {
     console.error(
-      "Error sending email:",
+      'Error sending email:',
       error.response?.text || error.message
     );
-    res.status(500).json({ error: "Failed to send password reset email." });
+    res.status(500).json({ error: 'Failed to send password reset email.' });
   }
 };
 
@@ -67,11 +67,12 @@ exports.validateResetLink = async (req, res, next) => {
 
   try {
     const resetRequest = await ForgotPasswordRequests.findOne({
-      where: { id: uuid, isActive: true },
+      id: uuid,
+      isActive: true,
     });
 
     if (!resetRequest) {
-      return res.status(400).json({ message: "reset link expired" });
+      return res.status(400).json({ message: 'reset link expired' });
     }
     return res.send(`
       <html>
@@ -124,22 +125,26 @@ exports.updatePassword = async (req, res, next) => {
   try {
     const { resetUuid, newPassword } = req.body;
     const resetRequest = await ForgotPasswordRequests.findOne({
-      where: { id: resetUuid, isActive: true },
+      id: resetUuid,
+      isActive: true,
     });
 
-    const user = await Users.findOne({ where: { id: resetRequest.userId } });
     const saltrounds = 10;
     bcrypt.hash(newPassword, saltrounds, async (err, hash) => {
-      await user.update({ passWord: hash });
-      await resetRequest.update({ isActive: false });
+      await Users.findByIdAndUpdate(resetRequest.userId, { passWord: hash });
+      await ForgotPasswordRequests.findOneAndUpdate(
+        { id: resetUuid },
+        { isActive: false },
+        { new: true }
+      );
 
       return res
         .status(200)
-        .json({ success: true, message: "password changed" });
+        .json({ success: true, message: 'password changed' });
     });
   } catch (err) {
     return res
       .status(500)
-      .json({ success: false, message: "failed to reset password" });
+      .json({ success: false, message: 'failed to reset password' });
   }
 };

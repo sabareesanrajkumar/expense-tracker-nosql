@@ -10,7 +10,7 @@ const userRoutes = require('./routes/users');
 const expenseRoutes = require('./routes/expenses');
 // const purchaseRoutes = require('./routes/purchase');
 // const premiumRoutes = require('./routes/premium');
-// const passwordRoutes = require('./routes/password');
+const passwordRoutes = require('./routes/password');
 const incomeRoutes = require('./routes/income');
 // const downloadRoutes = require('./routes/download');
 
@@ -34,7 +34,7 @@ app.use('/user', userRoutes);
 app.use('/expenses', expenseRoutes);
 // app.use('/purchase', purchaseRoutes);
 // app.use('/premium', premiumRoutes);
-// app.use('/password', passwordRoutes);
+app.use('/password', passwordRoutes);
 app.use('/income', incomeRoutes);
 // app.use('/download', downloadRoutes);
 

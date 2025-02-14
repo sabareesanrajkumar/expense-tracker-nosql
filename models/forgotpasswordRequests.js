@@ -4,14 +4,18 @@ const Schema = mongoose.Schema;
 
 const forgotPasswordRequestSchema = new Schema({
   id: {
-    type: Number,
+    type: String,
     required: true,
   },
-  userId: Number,
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   isActive: Boolean,
 });
 
 module.exports = mongoose.model(
-  'forgotpasswordrequest',
+  'ForgotPasswordRequest',
   forgotPasswordRequestSchema
 );
