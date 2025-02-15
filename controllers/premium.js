@@ -1,29 +1,36 @@
-const Expenses = require("../models/expenses");
-const Income = require("../models/income");
-const Users = require("../models/users");
-const Sequelize = require("sequelize");
-const { Op } = require("sequelize");
-const moment = require("moment");
+const Expenses = require('../models/expenses');
+const Income = require('../models/income');
+const Users = require('../models/users');
+const moment = require('moment');
 
 exports.getLeaderBoard = async (req, res, next) => {
   if (req.user) {
-    const leaderboardResponse = await Expenses.findAll({
-      attributes: ["userId"],
-      include: [
-        {
-          model: Users,
-          attributes: ["userName", "totalExpense"],
+    const leaderboardResponse = await Users.aggregate([
+      {
+        $lookup: {
+          from: 'Expense',
+          localField: '_id',
+          foreignField: 'userId',
+          as: 'expenses',
         },
-      ],
-      group: ["userId"],
-      order: [[Sequelize.literal("totalExpense"), "DESC"]],
-    });
+      },
+      {
+        $group: {
+          _id: '$_id',
+          userName: { $first: '$userName' },
+          totalExpense: { $sum: '$totalExpense' },
+        },
+      },
+      {
+        $sort: { totalExpense: -1 },
+      },
+    ]);
 
     const formattedResponse = leaderboardResponse.map((record) => {
       return {
-        userId: record.userId,
-        userName: record.user?.dataValues.userName,
-        totalExpense: record.user?.dataValues.totalExpense,
+        userId: record._id,
+        userName: record.userName,
+        totalExpense: record.totalExpense,
       };
     });
     return res.status(200).json(formattedResponse);
@@ -32,50 +39,47 @@ exports.getLeaderBoard = async (req, res, next) => {
 
 exports.getFileterdReport = async (req, res, next) => {
   const period = req.params.period;
-  const userId = req.user.id;
+  const userId = req.user._id;
 
   const now = moment.utc();
 
   let startDate;
-  if (period === "daily") {
-    startDate = now.startOf("day");
-  } else if (period === "weekly") {
-    startDate = now.startOf("week");
-  } else if (period === "monthly") {
-    startDate = now.startOf("month");
+  if (period === 'daily') {
+    startDate = now.startOf('day');
+  } else if (period === 'weekly') {
+    startDate = now.startOf('week');
+  } else if (period === 'monthly') {
+    startDate = now.startOf('month');
   } else {
-    return res.status(400).json({ message: "Invalid period" });
+    return res.status(400).json({ message: 'Invalid period' });
   }
 
-  const reportExpenses = await Expenses.findAll({
-    where: {
-      userId: userId,
-      createdAt: {
-        [Op.gte]: startDate.toDate(),
-      },
+  let reportExpenses = await Expenses.find({
+    userId: userId,
+    createdAt: {
+      $gte: startDate,
     },
   });
 
-  const reportIncome = await Income.findAll({
-    where: {
-      userId: userId,
-      createdAt: {
-        [Op.gte]: startDate.toDate(),
-      },
+  let reportIncome = await Income.find({
+    userId: userId,
+    createdAt: {
+      $gte: startDate,
     },
   });
 
-  formatDate(reportExpenses);
-  formatDate(reportIncome);
+  reportExpenses = formatDate(reportExpenses);
+  reportIncome = formatDate(reportIncome);
 
-  async function formatDate(records) {
-    await records.forEach((record) => {
-      const date = record.dataValues.updatedAt;
-      const dateStr = new Date(date);
-      return `${dateStr.getDate()}-${dateStr.getMonth()}-${dateStr.getFullYear()}`;
+  function formatDate(records) {
+    return records.map((record) => {
+      const doc = record._doc || record;
+      return {
+        ...doc,
+        createdAt: new Date(record.createdAt).toLocaleDateString('en-GB'),
+      };
     });
   }
   const filteredReportResponse = [...reportExpenses, ...reportIncome];
-
   return res.status(200).json(filteredReportResponse);
 };

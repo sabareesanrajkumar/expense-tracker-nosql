@@ -1,6 +1,7 @@
-const Razorpay = require("razorpay");
-const Order = require("../models/orders");
-require("dotenv").config();
+const Razorpay = require('razorpay');
+const Order = require('../models/orders');
+const Users = require('../models/users');
+require('dotenv').config();
 
 exports.purchasePremium = async (req, res, next) => {
   try {
@@ -11,14 +12,19 @@ exports.purchasePremium = async (req, res, next) => {
 
     const amountInPaise = 25 * 100;
     rzp.orders.create(
-      { amount: amountInPaise, currency: "INR" },
-      (err, data) => {
+      { amount: amountInPaise, currency: 'INR' },
+      async (err, data) => {
         var order = data;
         if (err) {
           throw new Error(JSON.stringify(err));
         }
-        req.user
-          .createOrder({ orderid: order.id, status: "PENDING" })
+        const newOrder = new Order({
+          userId: req.user._id,
+          orderId: order.id,
+          status: 'PENDING',
+        });
+        await newOrder
+          .save()
           .then(() => {
             return res.status(201).json({ order, key_id: rzp.key_id });
           })
@@ -31,30 +37,32 @@ exports.purchasePremium = async (req, res, next) => {
     console.log(err);
     return res
       .status(403)
-      .json({ success: false, message: "something went wrong", error: err });
+      .json({ success: false, message: 'something went wrong', error: err });
   }
 };
 
 exports.updateTransactionStatus = async (req, res, next) => {
   try {
     const { payment_id, order_id, status } = req.body;
+    const order = await Order.findOne({ orderId: order_id });
+    await Order.findByIdAndUpdate(order._id, {
+      paymentId: payment_id,
+      status: status,
+    });
 
-    const order = await Order.findOne({ where: { orderId: order_id } });
-    await order.update({ paymentid: payment_id, status: status });
-
-    if (status == "SUCCESSFUL") {
-      await req.user.update({ isPremiumUser: true });
+    if (status == 'SUCCESSFUL') {
+      await Users.findByIdAndUpdate(req.user._id, { isPremiumUser: true });
       return res
         .status(202)
-        .json({ success: true, message: "transaction successful" });
+        .json({ success: true, message: 'transaction successful' });
     } else {
       return res
         .status(202)
-        .json({ success: true, message: "transaction failed" });
+        .json({ success: true, message: 'transaction failed' });
     }
   } catch (err) {
     return res
       .status(403)
-      .json({ success: false, message: "something went wrong", error: err });
+      .json({ success: false, message: 'something went wrong', error: err });
   }
 };

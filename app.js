@@ -8,16 +8,16 @@ const mongoose = require('mongoose');
 
 const userRoutes = require('./routes/users');
 const expenseRoutes = require('./routes/expenses');
-// const purchaseRoutes = require('./routes/purchase');
-// const premiumRoutes = require('./routes/premium');
+const purchaseRoutes = require('./routes/purchase');
+const premiumRoutes = require('./routes/premium');
 const passwordRoutes = require('./routes/password');
 const incomeRoutes = require('./routes/income');
 // const downloadRoutes = require('./routes/download');
 
-const User = require('./models/users');
-const Expense = require('./models/expenses');
-const Income = require('./models/income');
-// const Order = require("./models/orders");
+// const User = require('./models/users');
+// const Expense = require('./models/expenses');
+// const Income = require('./models/income');
+// const Order = require('./models/orders');
 // const forgotPasswordRequest = require("./models/forgotpasswordRequests");
 
 const app = express();
@@ -32,8 +32,8 @@ app.use(express.json());
 
 app.use('/user', userRoutes);
 app.use('/expenses', expenseRoutes);
-// app.use('/purchase', purchaseRoutes);
-// app.use('/premium', premiumRoutes);
+app.use('/purchase', purchaseRoutes);
+app.use('/premium', premiumRoutes);
 app.use('/password', passwordRoutes);
 app.use('/income', incomeRoutes);
 // app.use('/download', downloadRoutes);

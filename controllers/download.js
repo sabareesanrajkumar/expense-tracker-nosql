@@ -1,14 +1,14 @@
-const Expenses = require("../models/expenses");
-const Income = require("../models/income");
-const Users = require("../models/users");
-const Sequelize = require("sequelize");
-const AWS = require("aws-sdk");
-require("dotenv").config();
+const Expenses = require('../models/expenses');
+const Income = require('../models/income');
+const Users = require('../models/users');
+const Sequelize = require('sequelize');
+const AWS = require('aws-sdk');
+require('dotenv').config();
 
 exports.downloadReport = async (req, res, next) => {
-  const expensesReport = await req.user.getExpenses();
+  const expensesReport = await Expenses.find({ UserId: req.user._id });
+  const incomeReport = await Income.find({ userId: req.user._id });
 
-  const incomeReport = await req.user.getIncomes();
   const reportString =
     JSON.stringify(expensesReport) + JSON.stringify(incomeReport);
   const filename = `report${req.user.id}/${new Date()}.txt`;
@@ -31,15 +31,15 @@ exports.downloadReport = async (req, res, next) => {
         Bucket: BUCKET_NAME,
         Key: filename,
         Body: data,
-        ACL: "public-read",
+        ACL: 'public-read',
       };
 
       s3bucket.upload(params, (err, s3response) => {
         if (err) {
-          console.error("Error during upload:", err);
+          console.error('Error during upload:', err);
           reject(err);
         } else {
-          console.log("Upload successful");
+          console.log('Upload successful');
           resolve(s3response.Location);
         }
       });

@@ -177,12 +177,8 @@ async function filterExpenses(period) {
   recordsTable.innerHTML = '';
   let tableRows = '';
   filteredRecords.data.forEach((record) => {
-    const recordDate = record.updatedAt
-      .split('T')[0]
-      .replace(/\s+/g, '')
-      .trim();
     const row = `<tr>
-        <td>${recordDate}</td>
+        <td>${record.createdAt}</td>
         <td>${record.description}</td>
         <td>${record.type ? record.type : ''}</td>
         <td>${record.expense ? record.expense : '-'}</td>

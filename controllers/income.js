@@ -68,7 +68,7 @@ exports.deleteIncome = async (req, res, next) => {
       req.user._id,
       {
         $inc: {
-          totalExpense: -oldIncome.income,
+          totalIncome: -oldIncome.income,
         },
       },
       { session }
